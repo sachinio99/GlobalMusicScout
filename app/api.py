@@ -63,7 +63,7 @@ def callback(code: str = Query(...), state: str = Query(None)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("search/{query}")
+#@app.get("search/{query}")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
