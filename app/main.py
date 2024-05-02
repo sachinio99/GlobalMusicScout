@@ -48,6 +48,12 @@ async def get_access_token(code: str):
     access_token = token_info['access_token']
     return access_token
 
+async def get_access_token(request: Request):
+    access_token = request.session.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="No access token in session")
+    return access_token
+
 @app.get("/auth/login")
 def login():
     try:
@@ -58,24 +64,26 @@ def login():
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 @app.get("/auth/callback")
 async def callback(request: Request, code: str = Query(...)):
     try:
         # Exchange the authorization code for an access token
         token_info = sp_oauth.get_access_token(code, as_dict=True)
-        request.session["access_token"] = await get_access_token(code)
+        request.session["access_token"] = token_info['access_token']
         return JSONResponse({"access_token": request.session["access_token"]})
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
 
 @app.get("/searchSong/{query}")
-async def search_song(query: str, access_token: str = Depends(get_access_token)):
+async def search_song(query: str, request:Request, access_token: str = Depends(get_access_token)):
     try:
+        print(f"Redirect URI: {query}")
         sp = spotipy.Spotify(auth=access_token)
         print(f"Redirect URI: {query}")
-        results = sp.search(q=query, limit = 1, type="track")
+        results = sp.search(q='track:'+ query, limit = 1, type='track')
         return results
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
