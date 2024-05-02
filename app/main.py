@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException,Query, Request,APIRouter
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordBearer
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from urllib.parse import urlencode
@@ -48,11 +49,18 @@ async def get_access_token(code: str):
     access_token = token_info['access_token']
     return access_token
 
-async def get_access_token(request: Request):
-    access_token = request.session.get("access_token")
-    if not access_token:
-        raise HTTPException(status_code=401, detail="No access token in session")
-    return access_token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+async def get_access_token(token: str = Depends(oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=401, detail="No access token provided")
+    sp = spotipy.Spotify(auth=token)
+    token_info = sp_oauth.get_cached_token()  # Get the token info from the cache
+    if not token_info:
+        raise HTTPException(status_code=401, detail="No token info found")
+    if sp_oauth.is_token_expired(token_info):  # Use sp_oauth instead of sp
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        token = token_info['access_token']
+    return token
 
 @app.get("/auth/login")
 def login():
@@ -89,12 +97,13 @@ async def search_song(query: str, request:Request, access_token: str = Depends(g
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/createPlaylist")
-def create_playlist(playlist_name: str, access_token: str = Depends(callback)):
+@app.post("/createPlaylist/")
+async def create_playlist(playlist_name: str = Query(...), access_token: str = Depends(get_access_token)):
     try:
         sp = spotipy.Spotify(auth=access_token)
         user_id = sp.current_user()["id"]
-        playlist = sp.user_playlist_create(user_id, playlist_name)
+        print(f"User ID: {user_id}")
+        playlist = sp.user_playlist_create(user_id, playlist_name, public=False)
         return playlist
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
