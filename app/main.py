@@ -43,7 +43,9 @@ sp_oauth = SpotifyOAuth(
     scope=os.getenv('SPOTIFY_SCOPE')
 )
 
-async def get_access_token():
+async def get_access_token(code: str):
+    token_info = sp_oauth.get_access_token(code)
+    access_token = token_info['access_token']
     return access_token
 
 @app.get("/auth/login")
@@ -62,8 +64,8 @@ async def callback(request: Request, code: str = Query(...)):
     try:
         # Exchange the authorization code for an access token
         token_info = sp_oauth.get_access_token(code, as_dict=True)
-        request.session["access_token"] = token_info["access_token"]
-        return JSONResponse({"access_token": access_token})
+        request.session["access_token"] = await get_access_token(code)
+        return JSONResponse({"access_token": request.session["access_token"]})
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
