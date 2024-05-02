@@ -86,13 +86,11 @@ async def callback(request: Request, code: str = Query(...)):
     
 
 @app.get("/searchSong/{query}")
-async def search_song(query: str, request:Request, access_token: str = Depends(get_access_token)):
+async def search_song(query: str, access_token: str = Depends(get_access_token)):
     try:
-        print(f"Redirect URI: {query}")
         sp = spotipy.Spotify(auth=access_token)
-        print(f"Redirect URI: {query}")
         results = sp.search(q='track:'+ query, limit = 1, type='track')
-        return results
+        return results.get('tracks').get('items')[0].get('uri')
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -108,8 +106,9 @@ async def create_playlist(playlist_name: str = Query(...), access_token: str = D
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+
 @app.post("/addSongToPlaylist")
-def addSongToPlaylist(playlist_id: str, song_uri: str, access_token: str = Depends(callback)):
+def addSongToPlaylist(playlist_id: str = Query(...), song_uri: str = Query(...), access_token: str = Depends(get_access_token)):
     try:
         sp = spotipy.Spotify(auth=access_token)
         sp.playlist_add_items(playlist_id, [song_uri])
