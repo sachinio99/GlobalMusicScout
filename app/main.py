@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from urllib.parse import urlencode
 import logging
 import os
 from dotenv import load_dotenv
@@ -25,7 +24,6 @@ SPOTIFY_SCOPE ='playlist-modify-private playlist-modify-public user-library-modi
 app.include_router(router)
 
 
-#
 # OAuth2 Details
 AUTH_URL = "https://accounts.spotify.com/authorize"
 TOKEN_URL = "https://accounts.spotify.com/api/token"
