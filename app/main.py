@@ -7,9 +7,8 @@ from urllib.parse import urlencode
 import logging
 import os
 from dotenv import load_dotenv
-from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
-import secrets
+
 
 
 
@@ -22,16 +21,11 @@ router = APIRouter()
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
-SPOTIFY_SCOPE = "playlist-modify-private playlist-modify-public"
+SPOTIFY_SCOPE ='playlist-modify-private playlist-modify-public user-library-modify'
 app.include_router(router)
-# Generate a 32-byte long secret key
-secret_key = secrets.token_hex(32)
 
-print(secret_key)
-app.add_middleware(
-    SessionMiddleware, secret_key=secret_key
-)
 
+#
 # OAuth2 Details
 AUTH_URL = "https://accounts.spotify.com/authorize"
 TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -53,7 +47,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 async def get_access_token(token: str = Depends(oauth2_scheme)):
     if not token:
         raise HTTPException(status_code=401, detail="No access token provided")
-    sp = spotipy.Spotify(auth=token)
     token_info = sp_oauth.get_cached_token()  # Get the token info from the cache
     if not token_info:
         raise HTTPException(status_code=401, detail="No token info found")
@@ -71,7 +64,7 @@ def login():
         response = RedirectResponse(url=auth_url)
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(e.status_code, detail=str(e))
     
 
 @app.get("/auth/callback")
@@ -80,38 +73,39 @@ async def callback(request: Request, code: str = Query(...)):
         # Exchange the authorization code for an access token
         token_info = sp_oauth.get_access_token(code, as_dict=True)
         request.session["access_token"] = token_info['access_token']
+        sp_oauth.auth = token_info['access_token']
         return JSONResponse({"access_token": request.session["access_token"]})
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(e.status_code, detail=str(e))
     
 
 @app.get("/searchSong/{query}")
-async def search_song(query: str, access_token: str = Depends(get_access_token)):
+async def search_song(query: str = Query(...)):
     try:
-        sp = spotipy.Spotify(auth=access_token)
+        sp = spotipy.Spotify(auth_manager=sp_oauth)
         results = sp.search(q='track:'+ query, limit = 1, type='track')
         return results.get('tracks').get('items')[0].get('uri')
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(e.status_code, detail=str(e))
 
 
-@app.post("/createPlaylist/")
-async def create_playlist(playlist_name: str = Query(...), access_token: str = Depends(get_access_token)):
+@app.get("/createPlaylist/{playlist_name}")
+async def create_playlist(playlist_name: str = Query(...)):
     try:
-        sp = spotipy.Spotify(auth=access_token)
+        sp = spotipy.Spotify(auth_manager=sp_oauth)
         user_id = sp.current_user()["id"]
         print(f"User ID: {user_id}")
         playlist = sp.user_playlist_create(user_id, playlist_name, public=False)
         return playlist
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(print("Status code:", e.status_code), detail=str(e))
     
 
-@app.post("/addSongToPlaylist")
-def addSongToPlaylist(playlist_id: str = Query(...), song_uri: str = Query(...), access_token: str = Depends(get_access_token)):
+@app.get("/addSongToPlaylist/{playlist_id}/{song_uri}")
+def addSongToPlaylist(playlist_id: str = Query(...), song_uri: str = Query(...)):
     try:
-        sp = spotipy.Spotify(auth=access_token)
-        sp.playlist_add_items(playlist_id, [song_uri])
+        sp = spotipy.Spotify(auth_manager = sp_oauth)
+        sp.playlist_add_items(playlist_id,  [song_uri])
         return {"message": "Song added to playlist"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
