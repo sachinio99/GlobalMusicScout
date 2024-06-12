@@ -1,0 +1,16 @@
+6/8/10
+
+Using this file to now track progress and set agendas for work sessions 
+Tasks:
+
+Goal is to get structued json output of a list of song names that can be searched using the spotify endpoint to get their uris and then add them to a playlist
+
+1. Enable function calling for open ai 
+2. create an agent with open ai 
+3. prompt the model to perform the operation of searching for underground songs based on location 
+4. Define function that can output songs in a json string 
+5. parse json string 
+6. loop through tokens and return the uris
+7. take each unique uri and add it to a playlist
+
+

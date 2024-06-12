@@ -19,6 +19,10 @@ def search_song(song_name: str):
     response = requests.get(url)
     return response.json().get('uri')
 
+
+
+
+
 #utility function to make a call to chat completions api, keeps track of conversation state 
 #For this specific case - When the api returns a list of songs, keep track of that and then return the URIs of each song in a JSON format
 @retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(3))
@@ -33,7 +37,7 @@ def chat_completion_request(messages, tools=None, model=GPT_MODEL):
         return response
     except Exception as e:
         print("Unable to generate ChatCompletion response")
-        print(f"Exception: {e}")
+        print(f"Exception: {e.status_code}")
         return e
     
 def pretty_print_conversation(messages):
@@ -44,6 +48,7 @@ def pretty_print_conversation(messages):
         "function": "magenta",
     }
     
+    #This is just a utility function ignore in the future
     for message in messages:
         if message["role"] == "system":
             print(colored(f"system: {message['content']}\n", role_to_color[message["role"]]))
@@ -57,15 +62,18 @@ def pretty_print_conversation(messages):
             print(colored(f"function ({message['name']}): {message['content']}\n", role_to_color[message["role"]]))
 
 messages = []
-messages.append({"role": "system", "content": "Don't make assumptions about what song to search for. Make sure to use the songs in the list returned based on the user's location"})
-messages.append({"role": "user", "content": "What are the Spotify song uri's for the songs in this list ?"})
+messages.append({"role": "system", "content": "Don't make assumptions about what song to search for or what functions to use. Make sure to use the songs in the list returned based on the user's location"})
+messages.append({"role": "system", "content": "If the location is missing, make sure to prompt the user for their current location and then use that in your search. Thanks! "})
+messages.append({"role": "user", "content": "Make me a playlist of underground songs from several different genres based on my location. "})
 chat_response = chat_completion_request(
-    messages, tools = custom_functions
+    messages, tools = custom_functions,tool_choice={"type": "function", "function": {"name": "parseOutputForSongList"}} #We are setting the tools list in the completion request function call 
 )
 
 assistant_message = chat_response.choices[0].message
 messages.append(assistant_message)
 pretty_print_conversation(messages)
+
+
 
 custom_functions = [
     {
@@ -134,5 +142,19 @@ custom_functions = [
                 }
             }
         }
+    },
+    {
+        'name': 'parseOutputForSongList',
+        'description': 'parse the json output from the model for names of songs',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'location': {
+                    'type': 'string',
+                    'description': 'location of user'
+                
+            }
+        }
+    }
     }
 ]
