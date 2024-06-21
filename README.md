@@ -25,6 +25,9 @@ Start the Fast API Server: The default url it will run on is localhost:8000
 Install ngrok after creating an account here: https://ngrok.com/docs/getting-started/
 ```brew install --cask ngrok```
 
+Make sure to configure your auth token, you can find this on the ngrok dashboard
+```ngrok config add-authtoken <<your_auth_token_here>>```
+
 Run ngrok on the correct port
 ```ngrok http http://localhost:8000```
 
