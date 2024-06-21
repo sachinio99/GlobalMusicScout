@@ -9,8 +9,6 @@ from dotenv import load_dotenv
 from starlette.requests import Request
 
 
-
-
 app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)

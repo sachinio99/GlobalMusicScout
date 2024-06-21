@@ -4,6 +4,9 @@ from openai import OpenAI
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored  
 import os
+from main import sp_oauth
+
+
 
 GPT_MODEL = "gpt-4"
 # Set your OpenAI API key from the environment variable
@@ -13,14 +16,16 @@ client = OpenAI(
 #This is the file that will define the flow for the agent that can return a list of songs and then return the URIs of the song that can be added to the playlist
 ngrok_url = "https://807a-207-38-131-18.ngrok-free.app/"
 
-#Define helper function to call api to search for a song
+
 def search_song(song_name: str):
     url = ngrok_url + "/searchSong/" + song_name
     response = requests.get(url)
     return response.json().get('uri')
 
-
-
+def login():
+    url = ngrok_url + "/auth/login"
+    response = requests.get(url)
+    return response.json().access_token
 
 
 #utility function to make a call to chat completions api, keeps track of conversation state 
@@ -115,13 +120,17 @@ custom_functions = [
     },
     {
         'name': 'create_playlist',
-        'description': 'Create a new playlist on the user\'s Spotify account',
+        'description': 'Create a new playlist on the users Spotify account',
         'parameters': {
             'type': 'object',
             'properties': {
                 'playlist_name': {
                     'type': 'string',
                     'description': 'The name of the new playlist'
+                },
+                'access_token':{
+                    'type':'string',
+                    'description':'The access token for the user'
                 }
             }
         }
