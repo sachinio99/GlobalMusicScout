@@ -3,10 +3,15 @@ FROM python:3.10-bullseye
 
 # Set the working directory in the container
 WORKDIR /app
+RUN echo "made working dir"
 
 # Copy the current directory contents into the container at /app
 COPY . .
 
+RUN echo "starting to install dependencies"
+#RUN pip install -r requirements.txt
+
+RUN echo "installed requirements"
 # Install any needed packages specified in requirements.txt
 RUN apt-get update && apt-get install -y \
     build-essential \
