@@ -6,7 +6,6 @@ from spotipy.oauth2 import SpotifyOAuth
 import logging
 import os
 from dotenv import load_dotenv
-from starlette.requests import Request
 
 
 app = FastAPI()
@@ -51,28 +50,33 @@ async def get_access_token(token: str = Depends(oauth2_scheme)):
         token = token_info['access_token']
     return token
 
+
 @app.get("/auth/login")
 def login():
     try:
+        
         auth_url = sp_oauth.get_authorize_url()
         print(f"Auth URL: {auth_url}")  # Add this line
         print(f"Redirect URI: {SPOTIFY_REDIRECT_URI}")  # Add this line
         response = RedirectResponse(url=auth_url)
         return response
-    except Exception as e:
-        raise HTTPException(e.status_code, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to initiate authentication")
+        
     
 
 @app.get("/auth/callback")
 async def callback(request: Request, code: str = Query(...)):
     try:
+        
         # Exchange the authorization code for an access token
         token_info = sp_oauth.get_access_token(code, as_dict=True)
-        request.session["access_token"] = token_info['access_token']
+        #request.session["access_token"] = token_info['access_token']
         sp_oauth.auth = token_info['access_token']
-        return JSONResponse({"access_token": request.session["access_token"]})
+        #return JSONResponse({"access_token": request.session["access_token"]})
+        return JSONResponse(token_info["access_token"])
     except Exception as e:
-        raise HTTPException(e.status_code, detail=str(e))
+        print(e)
     
 
 @app.get("/searchSong/{query}")
