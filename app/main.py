@@ -6,6 +6,12 @@ from spotipy.oauth2 import SpotifyOAuth
 import logging
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
+
+# Define the data model for the playlist- We are expecting the playlist to have a name and a list of Spotify song URIs 
+class Playlist(BaseModel):
+    name: str
+    songs: list
 
 
 app = FastAPI()
@@ -51,6 +57,7 @@ async def get_access_token(token: str = Depends(oauth2_scheme)):
     return token
 
 
+
 @app.get("/auth/login")
 def login():
     try:
@@ -66,7 +73,7 @@ def login():
     
 
 @app.get("/auth/callback")
-async def callback(request: Request, code: str = Query(...)):
+async def callback(code: str = Query(...)):
     try:
         
         # Exchange the authorization code for an access token
@@ -74,6 +81,7 @@ async def callback(request: Request, code: str = Query(...)):
         #request.session["access_token"] = token_info['access_token']
         sp_oauth.auth = token_info['access_token']
         #return JSONResponse({"access_token": request.session["access_token"]})
+        print(token_info)
         return JSONResponse(token_info["access_token"])
     except Exception as e:
         print(e)
@@ -110,3 +118,6 @@ def addSongToPlaylist(playlist_id: str = Query(...), song_uri: str = Query(...))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+
+#Can we consolidate the create and playlist functions into one. 

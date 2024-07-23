@@ -9,7 +9,7 @@ RUN echo "made working dir"
 COPY . .
 
 RUN echo "starting to install dependencies"
-RUN pip install -r requirements.txt
+#RUN pip install -r requirements.txt
 
 RUN echo "installed requirements"
 # Install any needed packages specified in requirements.txt

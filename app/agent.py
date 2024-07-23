@@ -13,8 +13,11 @@ GPT_MODEL = "gpt-4"
 client = OpenAI(
     api_key = os.getenv("OPENAI_API_KEY")
 )
+print(os.getenv("OPENAI_API_KEY"))
 #This is the file that will define the flow for the agent that can return a list of songs and then return the URIs of the song that can be added to the playlist
 ngrok_url = "https://807a-207-38-131-18.ngrok-free.app/"
+#Set up the session storage for the auth token
+session = requests.Session()
 
 
 def search_song(song_name: str):
@@ -25,59 +28,15 @@ def search_song(song_name: str):
 def login():
     url = ngrok_url + "/auth/login"
     response = requests.get(url)
+
+    session.post(url,response.json().access_token)
     return response.json().access_token
 
 
-#utility function to make a call to chat completions api, keeps track of conversation state 
-#For this specific case - When the api returns a list of songs, keep track of that and then return the URIs of each song in a JSON format
-@retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(3))
-def chat_completion_request(messages, tools=None, model=GPT_MODEL):
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools,
-            tool_choice=custom_functions,
-        )
-        return response
-    except Exception as e:
-        print("Unable to generate ChatCompletion response")
-        print(f"Exception: {e.status_code}")
-        return e
-    
-def pretty_print_conversation(messages):
-    role_to_color = {
-        "system": "red",
-        "user": "green",
-        "assistant": "blue",
-        "function": "magenta",
-    }
-    
-    #This is just a utility function ignore in the future
-    for message in messages:
-        if message["role"] == "system":
-            print(colored(f"system: {message['content']}\n", role_to_color[message["role"]]))
-        elif message["role"] == "user":
-            print(colored(f"user: {message['content']}\n", role_to_color[message["role"]]))
-        elif message["role"] == "assistant" and message.get("function_call"):
-            print(colored(f"assistant: {message['function_call']}\n", role_to_color[message["role"]]))
-        elif message["role"] == "assistant" and not message.get("function_call"):
-            print(colored(f"assistant: {message['content']}\n", role_to_color[message["role"]]))
-        elif message["role"] == "function":
-            print(colored(f"function ({message['name']}): {message['content']}\n", role_to_color[message["role"]]))
-
-messages = []
-messages.append({"role": "system", "content": "Don't make assumptions about what song to search for or what functions to use. Make sure to use the songs in the list returned based on the user's location"})
-messages.append({"role": "system", "content": "If the location is missing, make sure to prompt the user for their current location and then use that in your search. Thanks! "})
-messages.append({"role": "user", "content": "Make me a playlist of underground songs from several different genres based on my location. "})
-chat_response = chat_completion_request(
-    messages, tools = custom_functions,tool_choice={"type": "function", "function": {"name": "parseOutputForSongList"}} #We are setting the tools list in the completion request function call 
-)
-
-assistant_message = chat_response.choices[0].message
-messages.append(assistant_message)
-pretty_print_conversation(messages)
-
+def create_playlist(playlist_name: str, access_token: str):
+    url = ngrok_url + "/createPlaylist/" + playlist_name
+    response = requests.get(url, headers={"Authorization": f"Bearer {session.get(ngrok_url + '/auth/login').access_token}"})
+    return response.json().get('id')
 
 
 custom_functions = [
