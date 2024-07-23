@@ -10,7 +10,13 @@ Goal is to get structued json output of a list of song names that can be searche
 3. prompt the model to perform the operation of searching for underground songs based on location 
 4. Define function that can output songs in a json string 
 5. parse json string 
-6. loop through tokens and return the uris
+6. loop through the uris and use pydantic base model to extract structured output
 7. take each unique uri and add it to a playlist
+
+
+
+7/23
+
+So the cli file takes in input and is able to pass it to the completions api, but im having trouble generating consisten output when I pass in function definitions
 
 

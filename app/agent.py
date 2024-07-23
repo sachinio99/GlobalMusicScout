@@ -5,7 +5,11 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored  
 import os
 from main import sp_oauth
+import click
 
+@click.group()
+def main():
+    pass    
 
 
 GPT_MODEL = "gpt-4"
@@ -19,6 +23,20 @@ ngrok_url = "https://807a-207-38-131-18.ngrok-free.app/"
 #Set up the session storage for the auth token
 session = requests.Session()
 
+user_location = ""
+
+@main.command()
+@click.option("--location", prompt="Enter your location- be as specific as possible", type=(str))
+@click.option("--genre", prompt="Enter your preferred genre", type=(str))
+def get_user_location_genre(location, genre):
+    #print(f"Your location is {location}")
+    #session.post("localhost:8000" + "/userLocation", json={"location":location})
+    print("Location saved successfully...generating your playlist...")
+    user_location = location
+    print(run_conversation(location,genre))
+    return location
+
+prompt = "Generate a playlist of songs of underground artists that are popular in your location An underground artist is defined as having under 40k monthly listeners on Spotify Make sure to include a variety of genres, limit it to 15 songs and output the list in a JSON format that includes the song name and artist name in each entry. The location  of the user is "
 
 def search_song(song_name: str):
     url = ngrok_url + "/searchSong/" + song_name
@@ -28,12 +46,11 @@ def search_song(song_name: str):
 def login():
     url = ngrok_url + "/auth/login"
     response = requests.get(url)
-
     session.post(url,response.json().access_token)
     return response.json().access_token
 
 
-def create_playlist(playlist_name: str, access_token: str):
+def create_playlist(playlist_name: str):
     url = ngrok_url + "/createPlaylist/" + playlist_name
     response = requests.get(url, headers={"Authorization": f"Bearer {session.get(ngrok_url + '/auth/login').access_token}"})
     return response.json().get('id')
@@ -124,5 +141,48 @@ custom_functions = [
             }
         }
     }
+    },
+    {
+        'name': 'get_user_location',
+        'description': 'Get the location of the user',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'location': {
+                    'type': 'string',
+                    'description': 'location of user'
+                }
+            }
+        }
+    }   
+]
+
+functions = [
+    {
+        "type": "function",
+        "function": {
+            'name': 'login',
+            'description': 'Redirect the user to the Spotify authorization URL for authentication',
+            'parameters': {}
+        }
     }
 ]
+def run_conversation(location: str, genre_pref: str):
+    messages = [{"role":"user", 
+                "content": prompt + " " + location + "." + "My preferred genre that this playlist should focus on is " + genre_pref + "."
+                }]
+    
+
+    response = client.chat.completions.create(model = GPT_MODEL, messages = messages, tools = functions, tool_choice="auto")
+
+    first_response = response.choices[0].message
+    print(first_response)
+    needs_function = first_response.message.tool_calls
+    if needs_function:
+        print("needs to use a function we passed in")
+
+if __name__ == "__main__":
+    main()
+
+
+print(run_conversation(user_location))

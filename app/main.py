@@ -9,9 +9,12 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 # Define the data model for the playlist- We are expecting the playlist to have a name and a list of Spotify song URIs 
-class Playlist(BaseModel):
+class GeneratedPlaylist(BaseModel):
+    location: str
     name: str
     songs: list
+
+
 
 
 app = FastAPI()
@@ -55,8 +58,6 @@ async def get_access_token(token: str = Depends(oauth2_scheme)):
         token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
         token = token_info['access_token']
     return token
-
-
 
 @app.get("/auth/login")
 def login():
@@ -117,7 +118,6 @@ def addSongToPlaylist(playlist_id: str = Query(...), song_uri: str = Query(...))
         return {"message": "Song added to playlist"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 
 #Can we consolidate the create and playlist functions into one. 
