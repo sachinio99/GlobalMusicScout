@@ -168,18 +168,20 @@ functions = [
     }
 ]
 def run_conversation(location: str, genre_pref: str):
-    messages = [{"role":"user", 
+    messages = [{"role":"system", 
                 "content": prompt + " " + location + "." + "My preferred genre that this playlist should focus on is " + genre_pref + "."
                 }]
     
 
     response = client.chat.completions.create(model = GPT_MODEL, messages = messages, tools = functions, tool_choice="auto")
+    print(response)
+    available_functions = {
+        "login":login,
+        "search_song":search_song,
+        "create_playlist":create_playlist
+    }
 
-    first_response = response.choices[0].message
-    print(first_response)
-    needs_function = first_response.message.tool_calls
-    if needs_function:
-        print("needs to use a function we passed in")
+    messages = response['choices'][0]['message']
 
 if __name__ == "__main__":
     main()
